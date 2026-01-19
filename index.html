@@ -3,46 +3,36 @@
 <head>
 <meta charset="UTF-8">
 <title>Professional Stock Dashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
 :root{
-  --bg:#0f172a;
-  --panel:#020617;
-  --border:#1f2937;
-  --text:#e5e7eb;
-  --green:#22c55e;
-  --red:#ef4444;
-  --orange:#f59e0b;
+  --bg:#0f172a;--panel:#020617;--border:#1f2937;--text:#e5e7eb;
+  --green:#22c55e;--red:#ef4444;--orange:#f59e0b;
 }
 body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text);}
+.topbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;padding:10px}
+.card{background:#020617;border:1px solid var(--border);padding:10px;border-radius:14px;text-align:center}
+.big{font-size:22px;font-weight:bold}
 header{position:sticky;top:0;background:var(--panel);padding:10px;border-bottom:1px solid var(--border);z-index:99}
 .controls{display:flex;gap:8px;flex-wrap:wrap}
-input,button{background:#0f172a;color:white;border:1px solid var(--border);padding:7px;border-radius:6px}
+input,button{background:#0f172a;color:white;border:1px solid var(--border);padding:7px;border-radius:8px}
 button:hover{background:#1f2937;cursor:pointer}
-
-.topbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;padding:10px}
-.card{background:#020617;border:1px solid var(--border);padding:10px;border-radius:12px;text-align:center}
-.big{font-size:20px;font-weight:bold}
-
 .container{padding:10px}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th,td{border:1px solid var(--border);padding:6px;text-align:center;white-space:nowrap}
 th{position:sticky;top:110px;background:#020617;cursor:pointer}
 tr:nth-child(even){background:#0b1220}
-
 .green{color:var(--green);font-weight:bold}
 .red{color:var(--red);font-weight:bold}
 .orange{color:var(--orange);font-weight:bold}
 .small{font-size:10px;opacity:.7}
-
 .popup{
   position:fixed;bottom:20px;right:20px;
   background:#020617;border:1px solid var(--border);
-  padding:12px;border-radius:10px;display:none;z-index:999;
+  padding:12px;border-radius:12px;display:none;z-index:999;
 }
 .popup button{margin-top:6px;width:100%}
-.timestamp{padding:6px;font-size:12px;opacity:.7}
 </style>
 </head>
 <body>
@@ -65,7 +55,7 @@ tr:nth-child(even){background:#0b1220}
     <button onclick="filter='all';render()">All</button>
     <button onclick="muted=!muted">🔊 Mute</button>
   </div>
-  <div class="timestamp">Last refresh: <span id="time">--</span></div>
+  <div style="font-size:12px;opacity:.7">Last refresh: <span id="time">--</span></div>
 </header>
 
 <div class="container">
@@ -125,23 +115,55 @@ async function loadMCX(){
     copper.textContent="₹"+d.copper_1kg;
     usd.textContent="₹"+d.usd_inr;
   }catch{
-    gold.textContent="₹72,000";
-    silver.textContent="₹88,000";
-    copper.textContent="₹780";
-    usd.textContent="₹83.10";
+    gold.textContent="₹--";
+    silver.textContent="₹--";
+    copper.textContent="₹--";
+    usd.textContent="₹--";
   }
 }
 
-// ================= MOCK DATA =================
+// ================= PARSE WORKER DATA =================
+function parseWorker(j){
+  try{
+    const r=j.chart.result[0];
+    const ts=r.timestamp;
+    const q=r.indicators.quote[0];
+    let out=[];
+    for(let i=0;i<ts.length;i++){
+      if(q.close[i]==null) continue;
+      out.push({
+        date:new Date(ts[i]*1000).toISOString().slice(0,10),
+        open:q.open[i],high:q.high[i],low:q.low[i],
+        close:q.close[i],volume:q.volume?.[i]||0
+      });
+    }
+    return out;
+  }catch{return []}
+}
+
+// ================= MOCK =================
 function mock(){
   let arr=[],p=100+Math.random()*200;
   for(let i=60;i>=0;i--){
     let d=new Date();d.setDate(d.getDate()-i);
-    let o=p,c=o+(Math.random()-0.5)*8;
-    arr.push({date:d.toISOString().slice(0,10),open:o,high:o+2,low:o-2,close:c,volume:1000+Math.random()*5000});
+    let o=p,c=o+(Math.random()-0.5)*6;
+    arr.push({date:d.toISOString().slice(0,10),open:o,high:o+2,low:o-2,close:c,volume:1000+Math.random()*4000});
     p=c;
   }
   return arr;
+}
+
+// ================= LOAD =================
+async function load(){
+  for(let s of STOCKS){
+    try{
+      const j=await (await fetch(STOCK_API+s)).json();
+      const parsed=parseWorker(j);
+      DB[s]=parsed.length>30?parsed:mock();
+    }catch{DB[s]=mock();}
+  }
+  date.value=DB[STOCKS[0]].at(-1).date;
+  render();
 }
 
 // ================= INDICATORS =================
@@ -150,8 +172,8 @@ const RSI=(a,p=14)=>{let g=0,l=0;for(let i=1;i<=p;i++){let d=a[i]-a[i-1];d>0?g+=
 
 // ================= STRATEGY =================
 function signal(e9,e21,rsi,c,s,r){
-  if(e9>e21&&rsi>60&&c>r*0.99) return "BUY";
-  if(e9<e21&&rsi<40&&c<s*1.01) return "SELL";
+  if(e9>e21 && rsi>60 && c>r*0.99) return "BUY";
+  if(e9<e21 && rsi<40 && c<s*1.01) return "SELL";
   return "HOLD";
 }
 function gtt(t,sig){
@@ -166,26 +188,13 @@ function gtt(t,sig){
 function alertSignal(stock,sig){
   if(sig==="HOLD"||lastSignals[stock]===sig) return;
   lastSignals[stock]=sig;
-  popupText.textContent=`${stock}: ${sig} Signal`;
+  popupText.innerHTML=`<b style="color:${sig==="BUY"?"#22c55e":"#ef4444"}">${stock} ${sig}</b>`;
   popup.style.display="block";
   if(!muted){
-    let audio=new Audio("https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg");
-    audio.loop=true;
-    audio.play();
-    setTimeout(()=>{audio.pause();audio.currentTime=0},3000);
+    let a=new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+    a.loop=true;a.play();
+    setTimeout(()=>{a.pause();a.currentTime=0},3000);
   }
-}
-
-// ================= LOAD DATA =================
-async function load(){
-  for(let s of STOCKS){
-    try{
-      const j=await (await fetch(STOCK_API+s)).json();
-      DB[s]=mock(); // fallback always available
-    }catch{ DB[s]=mock(); }
-  }
-  date.value=DB[STOCKS[0]].at(-1).date;
-  render();
 }
 
 // ================= RENDER =================
@@ -199,7 +208,6 @@ function render(){
     if(search && !s.toLowerCase().includes(search)) continue;
     let d=DB[s]; if(!d||d.length<30) continue;
     let idx=d.findIndex(x=>x.date===dVal); if(idx<30) idx=d.length-1;
-
     let slice=d.slice(0,idx+1), t=slice.at(-1);
     let closes=slice.map(x=>x.close);
 
@@ -221,8 +229,9 @@ function render(){
     let cls=trend==="Uptrend"?"green":trend==="Downtrend"?"red":"orange";
     let pct=((t.close-t.open)/t.open*100).toFixed(2);
 
+    let nameColor=sig==="BUY"?"green":sig==="SELL"?"red":"";
     html+=`<tr>
-      <td>${s}</td>
+      <td class="${nameColor}" style="font-weight:bold">${s}</td>
       <td>${t.close.toFixed(2)}</td>
       <td><span class="small">L:${t.low.toFixed(1)} H:${t.high.toFixed(1)} ${pct}%</span></td>
       <td><span class="small">L:${Math.min(...week.map(x=>x.low)).toFixed(1)} H:${Math.max(...week.map(x=>x.high)).toFixed(1)}</span></td>
@@ -248,12 +257,7 @@ function render(){
 function sortTable(n){
   let table=document.getElementById("table");
   let rows=[...table.rows].slice(1);
-  let asc=true;
-  rows.sort((a,b)=>{
-    let x=a.cells[n].innerText;
-    let y=b.cells[n].innerText;
-    return asc?(x>y?1:-1):(x<y?1:-1);
-  });
+  rows.sort((a,b)=>a.cells[n].innerText.localeCompare(b.cells[n].innerText,undefined,{numeric:true}));
   rows.forEach(r=>table.tBodies[0].appendChild(r));
 }
 
