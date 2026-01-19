@@ -2,9 +2,8 @@
 <html>
 <head>
 <meta charset="UTF-8" />
-<title>Advanced Stock Market Dashboard</title>
+<title>Stock Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-
 <style>
 :root{
   --bg:#0f172a;--panel:#020617;--border:#1f2937;--text:#e5e7eb;
@@ -27,22 +26,18 @@ tr:nth-child(even){background:#0b1220}
 .red{color:var(--red);font-weight:bold}
 .orange{color:var(--orange);font-weight:bold}
 .small{font-size:10px;opacity:.7}
-.popup{
-  position:fixed;bottom:20px;right:20px;
-  background:#020617;border:1px solid var(--border);
-  padding:12px;border-radius:12px;display:none;z-index:999;
-}
+.popup{position:fixed;bottom:20px;right:20px;background:#020617;border:1px solid var(--border);
+padding:12px;border-radius:12px;display:none;z-index:999;}
 .popup button{margin-top:6px;width:100%}
 </style>
 </head>
 <body>
 
-<!-- MCX PANEL -->
 <div class="topbar">
-  <div class="card">Gold 24K 10g<div class="big" id="gold">--</div></div>
-  <div class="card">Silver 1kg<div class="big" id="silver">--</div></div>
-  <div class="card">Copper<div class="big" id="copper">--</div></div>
-  <div class="card">USD → INR<div class="big" id="usd">--</div></div>
+  <div class="card">Gold 24K 10g<div class="big" id="gold">₹--</div></div>
+  <div class="card">Silver 1kg<div class="big" id="silver">₹--</div></div>
+  <div class="card">Copper<div class="big" id="copper">₹--</div></div>
+  <div class="card">USD → INR<div class="big" id="usd">₹--</div></div>
 </div>
 
 <header>
@@ -72,7 +67,7 @@ tr:nth-child(even){background:#0b1220}
 <th onclick="sortTable(7)">EMA21</th>
 <th>Support</th>
 <th>Resistance</th>
-<th onclick="sortTable(10)">Trend</th>
+<th>Trend</th>
 <th>Signal</th>
 <th>Entry</th>
 <th>SL</th>
@@ -91,38 +86,29 @@ tr:nth-child(even){background:#0b1220}
 </div>
 
 <script>
-// ================= CONFIG =================
-const WORKER = "https://red-tooth-e4f7.lovelyideas-in.workers.dev";
-const STOCK_API = WORKER + "/?symbol=";
-const MCX_API = WORKER + "/mcx";
+const WORKER="https://red-tooth-e4f7.lovelyideas-in.workers.dev";
+const STOCK_API=WORKER+"/?symbol=";
+const MCX_API=WORKER+"/mcx";
 
-const STOCKS = [
-"NIFTYBEES","TATAGOLD","TATSILVER","HINDCOPPER","BSE","SAGILITY","CUPID","IDEA","JPPOWER",
+const STOCKS=["NIFTYBEES","TATAGOLD","TATSILVER","HINDCOPPER","BSE","SAGILITY","CUPID","IDEA","JPPOWER",
 "HDFCBANK","SBIN","MON100","MEESHO","RVNL","ORIENTTECH","HARAFIN","RBLBANK","IRIS",
-"GREAVESCOT","NTPCGREEN","TCS","KIMS"
-];
+"GREAVESCOT","NTPCGREEN","TCS","KIMS"];
 
 let DB={},filter="all",lastSignals={},muted=false;
 
-// ================= MCX PANEL =================
 async function loadMCX(){
   try{
-    const r=await fetch(MCX_API);
+    const r=await fetch(MCX_API,{cache:"no-store"});
     const d=await r.json();
-    if(!d||d.error) throw 0;
-    gold.textContent="₹"+d.gold_10g;
-    silver.textContent="₹"+d.silver_1kg;
-    copper.textContent="₹"+d.copper_1kg;
-    usd.textContent="₹"+d.usd_inr;
+    gold.textContent   = d.gold_10g   ? "₹"+Number(d.gold_10g).toLocaleString()   : "₹--";
+    silver.textContent = d.silver_1kg ? "₹"+Number(d.silver_1kg).toLocaleString() : "₹--";
+    copper.textContent = d.copper     ? "₹"+Number(d.copper).toLocaleString()     : "₹--";
+    usd.textContent    = d.usd_inr    ? "₹"+Number(d.usd_inr).toFixed(2)          : "₹--";
   }catch{
-    gold.textContent="₹--";
-    silver.textContent="₹--";
-    copper.textContent="₹--";
-    usd.textContent="₹--";
+    gold.textContent=silver.textContent=copper.textContent=usd.textContent="₹--";
   }
 }
 
-// ================= PARSE WORKER =================
 function parseWorker(j){
   try{
     const r=j.chart.result[0];
@@ -141,7 +127,6 @@ function parseWorker(j){
   }catch{return []}
 }
 
-// ================= MOCK =================
 function mock(){
   let arr=[],p=100+Math.random()*200;
   for(let i=60;i>=0;i--){
@@ -153,7 +138,6 @@ function mock(){
   return arr;
 }
 
-// ================= LOAD =================
 async function load(){
   for(let s of STOCKS){
     try{
@@ -166,16 +150,15 @@ async function load(){
   render();
 }
 
-// ================= INDICATORS =================
 const EMA=(a,p)=>{let k=2/(p+1),e=a[0];a.forEach(v=>e=v*k+e*(1-k));return e;}
 const RSI=(a,p=14)=>{let g=0,l=0;for(let i=1;i<=p;i++){let d=a[i]-a[i-1];d>0?g+=d:l-=d;}let rs=g/(l||1);return 100-(100/(1+rs));}
 
-// ================= STRATEGY =================
 function signal(e9,e21,rsi,c,s,r){
   if(e9>e21 && rsi>60 && c>r*0.99) return "BUY";
   if(e9<e21 && rsi<40 && c<s*1.01) return "SELL";
   return "HOLD";
 }
+
 function gtt(t,sig){
   let sl=sig==="BUY"?t.close*0.98:t.close*1.02;
   let tgt=sig==="BUY"?t.close*1.03:t.close*0.97;
@@ -184,7 +167,6 @@ function gtt(t,sig){
   return "Waiting";
 }
 
-// ================= ALERT =================
 function alertSignal(stock,sig){
   if(sig==="HOLD"||lastSignals[stock]===sig) return;
   lastSignals[stock]=sig;
@@ -197,7 +179,6 @@ function alertSignal(stock,sig){
   }
 }
 
-// ================= RENDER =================
 function render(){
   time.textContent=new Date().toLocaleTimeString();
   const dVal=date.value;
@@ -232,7 +213,10 @@ function render(){
     let entry=t.close;
     let sl=sig==="BUY"?entry*0.98:entry*1.02;
     let tgt=sig==="BUY"?entry*1.03:entry*0.97;
-    let rr=Math.abs((tgt-entry)/(entry-sl)).toFixed(2);
+
+    let risk=Math.abs(entry-sl);
+    let reward=Math.abs(tgt-entry);
+    let rr=risk>0?(reward/risk).toFixed(2):"--";
 
     let nameColor=sig==="BUY"?"green":sig==="SELL"?"red":"";
 
@@ -259,7 +243,6 @@ function render(){
   tbody.innerHTML=html;
 }
 
-// ================= SORT =================
 function sortTable(n){
   let table=document.getElementById("table");
   let rows=[...table.rows].slice(1);
@@ -267,7 +250,6 @@ function sortTable(n){
   rows.forEach(r=>table.tBodies[0].appendChild(r));
 }
 
-// ================= AUTO =================
 load();
 loadMCX();
 setInterval(()=>{render();loadMCX();},60000);
