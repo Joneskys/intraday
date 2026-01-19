@@ -2,8 +2,8 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Stock Market Dashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Professional Stock Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
 :root{
@@ -27,8 +27,11 @@ tr:nth-child(even){background:#0b1220}
 .red{color:var(--red);font-weight:bold}
 .orange{color:var(--orange);font-weight:bold}
 .small{font-size:10px;opacity:.7}
-.popup{position:fixed;bottom:20px;right:20px;background:#020617;border:1px solid var(--border);
-padding:12px;border-radius:12px;display:none;z-index:999;}
+.popup{
+  position:fixed;bottom:20px;right:20px;
+  background:#020617;border:1px solid var(--border);
+  padding:12px;border-radius:12px;display:none;z-index:999;
+}
 .popup button{margin-top:6px;width:100%}
 </style>
 </head>
@@ -88,12 +91,12 @@ padding:12px;border-radius:12px;display:none;z-index:999;}
 </div>
 
 <script>
-// ================= CONFIG =================
-const WORKER = "https://red-tooth-e4f7.lovelyideas-in.workers.dev";
-const STOCK_API = WORKER + "/?symbol=";
-const MCX_API = WORKER + "/mcx";
+/* ================= CONFIG ================= */
+const WORKER="https://red-tooth-e4f7.lovelyideas-in.workers.dev";
+const STOCK_API=WORKER+"/?symbol=";
+const MCX_API=WORKER+"/mcx";
 
-const STOCKS = [
+const STOCKS=[
 "NIFTYBEES","TATAGOLD","TATSILVER","HINDCOPPER","BSE","SAGILITY","CUPID","IDEA","JPPOWER",
 "HDFCBANK","SBIN","MON100","MEESHO","RVNL","ORIENTTECH","HARAFIN","RBLBANK","IRIS",
 "GREAVESCOT","NTPCGREEN","TCS","KIMS"
@@ -101,7 +104,7 @@ const STOCKS = [
 
 let DB={},filter="all",lastSignals={},muted=false;
 
-// ================= MCX =================
+/* ================= MCX ================= */
 async function loadMCX(){
   try{
     const r=await fetch(MCX_API,{cache:"no-store"});
@@ -115,7 +118,7 @@ async function loadMCX(){
   }
 }
 
-// ================= PARSE WORKER =================
+/* ================= WORKER PARSER ================= */
 function parseWorker(j){
   try{
     const r=j.chart.result[0];
@@ -134,19 +137,19 @@ function parseWorker(j){
   }catch{return []}
 }
 
-// ================= MOCK =================
+/* ================= MOCK DATA ================= */
 function mock(){
   let arr=[],p=100+Math.random()*200;
   for(let i=60;i>=0;i--){
     let d=new Date();d.setDate(d.getDate()-i);
     let o=p,c=o+(Math.random()-0.5)*6;
-    arr.push({date:d.toISOString().slice(0,10),open:o,high:o+2,low:o-2,close:c,volume:100000+Math.random()*5000000});
+    arr.push({date:d.toISOString().slice(0,10),open:o,high:o+2,low:o-2,close:c,volume:200000+Math.random()*8000000});
     p=c;
   }
   return arr;
 }
 
-// ================= LOAD =================
+/* ================= LOAD ================= */
 async function load(){
   for(let s of STOCKS){
     try{
@@ -159,11 +162,11 @@ async function load(){
   render();
 }
 
-// ================= INDICATORS =================
+/* ================= INDICATORS ================= */
 const EMA=(a,p)=>{let k=2/(p+1),e=a[0];a.forEach(v=>e=v*k+e*(1-k));return e;}
 const RSI=(a,p=14)=>{let g=0,l=0;for(let i=1;i<=p;i++){let d=a[i]-a[i-1];d>0?g+=d:l-=d;}let rs=g/(l||1);return 100-(100/(1+rs));}
 
-// ================= STRATEGY =================
+/* ================= STRATEGY ================= */
 function signal(e9,e21,rsi,c,s,r){
   if(e9>e21 && rsi>60 && c>r*0.99) return "BUY";
   if(e9<e21 && rsi<40 && c<s*1.01) return "SELL";
@@ -178,7 +181,7 @@ function gtt(t,sig){
   return "Waiting";
 }
 
-// ================= ALERT =================
+/* ================= ALERT ================= */
 function alertSignal(stock,sig){
   if(sig==="HOLD"||lastSignals[stock]===sig) return;
   lastSignals[stock]=sig;
@@ -191,7 +194,7 @@ function alertSignal(stock,sig){
   }
 }
 
-// ================= RENDER =================
+/* ================= RENDER ================= */
 function render(){
   time.textContent=new Date().toLocaleTimeString();
   const dVal=date.value;
@@ -236,7 +239,7 @@ function render(){
     html+=`<tr>
       <td class="${nameColor}" style="font-weight:bold">${s}</td>
       <td>${t.close.toFixed(2)}</td>
-      <td><span class="small">L:${t.low.toFixed(1)} H:${t.high.toFixed(1)} ${pct}% V:${(t.volume/100000).toFixed(2)}L</span></td>
+      <td><span class="small">L:${t.low.toFixed(1)} H:${t.high.toFixed(1)} ${pct}% V:${Math.round(t.volume/100000)}L</span></td>
       <td><span class="small">L:${Math.min(...week.map(x=>x.low)).toFixed(1)} H:${Math.max(...week.map(x=>x.high)).toFixed(1)}</span></td>
       <td><span class="small">L:${Math.min(...month.map(x=>x.low)).toFixed(1)} H:${Math.max(...month.map(x=>x.high)).toFixed(1)}</span></td>
       <td>${rsi.toFixed(1)}</td>
@@ -256,7 +259,7 @@ function render(){
   tbody.innerHTML=html;
 }
 
-// ================= SORT =================
+/* ================= SORT ================= */
 function sortTable(n){
   let table=document.getElementById("table");
   let rows=[...table.rows].slice(1);
@@ -264,7 +267,7 @@ function sortTable(n){
   rows.forEach(r=>table.tBodies[0].appendChild(r));
 }
 
-// ================= AUTO =================
+/* ================= AUTO ================= */
 load();
 loadMCX();
 setInterval(()=>{render();loadMCX();},60000);
