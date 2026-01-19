@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Professional Stock Dashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8" />
+<title>Advanced Stock Market Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <style>
 :root{
@@ -13,7 +13,7 @@
 body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text);}
 .topbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;padding:10px}
 .card{background:#020617;border:1px solid var(--border);padding:10px;border-radius:14px;text-align:center}
-.big{font-size:22px;font-weight:bold}
+.big{font-size:20px;font-weight:bold}
 header{position:sticky;top:0;background:var(--panel);padding:10px;border-bottom:1px solid var(--border);z-index:99}
 .controls{display:flex;gap:8px;flex-wrap:wrap}
 input,button{background:#0f172a;color:white;border:1px solid var(--border);padding:7px;border-radius:8px}
@@ -74,10 +74,10 @@ tr:nth-child(even){background:#0b1220}
 <th>Resistance</th>
 <th onclick="sortTable(10)">Trend</th>
 <th>Signal</th>
-<th>Trade</th>
+<th>Entry</th>
 <th>SL</th>
 <th>Target</th>
-<th>Hold</th>
+<th>R:R</th>
 <th>GTT</th>
 </tr>
 </thead>
@@ -122,7 +122,7 @@ async function loadMCX(){
   }
 }
 
-// ================= PARSE WORKER DATA =================
+// ================= PARSE WORKER =================
 function parseWorker(j){
   try{
     const r=j.chart.result[0];
@@ -229,11 +229,17 @@ function render(){
     let cls=trend==="Uptrend"?"green":trend==="Downtrend"?"red":"orange";
     let pct=((t.close-t.open)/t.open*100).toFixed(2);
 
+    let entry=t.close;
+    let sl=sig==="BUY"?entry*0.98:entry*1.02;
+    let tgt=sig==="BUY"?entry*1.03:entry*0.97;
+    let rr=Math.abs((tgt-entry)/(entry-sl)).toFixed(2);
+
     let nameColor=sig==="BUY"?"green":sig==="SELL"?"red":"";
+
     html+=`<tr>
       <td class="${nameColor}" style="font-weight:bold">${s}</td>
       <td>${t.close.toFixed(2)}</td>
-      <td><span class="small">L:${t.low.toFixed(1)} H:${t.high.toFixed(1)} ${pct}%</span></td>
+      <td><span class="small">L:${t.low.toFixed(1)} H:${t.high.toFixed(1)} ${pct}% V:${t.volume}</span></td>
       <td><span class="small">L:${Math.min(...week.map(x=>x.low)).toFixed(1)} H:${Math.max(...week.map(x=>x.high)).toFixed(1)}</span></td>
       <td><span class="small">L:${Math.min(...month.map(x=>x.low)).toFixed(1)} H:${Math.max(...month.map(x=>x.high)).toFixed(1)}</span></td>
       <td>${rsi.toFixed(1)}</td>
@@ -243,10 +249,10 @@ function render(){
       <td>${resistance.toFixed(2)}</td>
       <td class="${cls}">${trend}</td>
       <td class="${sig==="BUY"?"green":sig==="SELL"?"red":"orange"}">${sig}</td>
-      <td>${t.close.toFixed(2)}</td>
-      <td>${(t.close*(sig==="BUY"?0.98:1.02)).toFixed(2)}</td>
-      <td>${(t.close*(sig==="BUY"?1.03:0.97)).toFixed(2)}</td>
-      <td>30–90m</td>
+      <td>${entry.toFixed(2)}</td>
+      <td>${sl.toFixed(2)}</td>
+      <td>${tgt.toFixed(2)}</td>
+      <td>${rr}</td>
       <td>${gtt(t,sig)}</td>
     </tr>`;
   }
