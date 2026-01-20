@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -7,51 +6,163 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-body{
-  font-family:system-ui;
-  background:#0f172a;
-  color:#e5e7eb;
-  display:flex;
-  justify-content:center;
-  padding:20px;
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: white;
 }
-.card{
-  background:#020617;
-  border:1px solid #1f2937;
-  border-radius:16px;
-  padding:20px;
-  max-width:480px;
-  width:100%;
+
+.wrapper {
+  max-width: 500px;
+  margin: 40px auto;
+  background: #020617;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  padding: 20px;
 }
-h2{text-align:center;margin-top:0}
-input{
-  width:100%;
-  padding:10px;
-  margin:8px 0;
-  border-radius:8px;
-  border:1px solid #1f2937;
-  background:#0f172a;
-  color:white;
+
+h2 {
+  text-align: center;
 }
-label{font-size:14px;opacity:.8}
-button{
-  width:100%;
-  padding:10px;
-  margin-top:10px;
-  background:#2563eb;
-  color:white;
-  border:none;
-  border-radius:10px;
-  cursor:pointer;
+
+label {
+  display: block;
+  margin-top: 10px;
+  font-size: 14px;
 }
-button:hover{background:#1d4ed8}
-.result{
-  margin-top:15px;
-  background:#0f172a;
-  border:1px solid #1f2937;
-  border-radius:12px;
-  padding:12px;
-  font-size:14px;
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 5px;
+  background: #0f172a;
+  border: 1px solid #1f2937;
+  color: white;
+  border-radius: 6px;
 }
-.green{color:#22c55e;font-weight:bold}
-.red{
+
+button {
+  width: 100%;
+  margin-top: 15px;
+  padding: 10px;
+  background: #2563eb;
+  border: none;
+  color: white;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1d4ed8;
+}
+
+.result {
+  margin-top: 20px;
+  padding: 15px;
+  background: #0f172a;
+  border-radius: 10px;
+  border: 1px solid #1f2937;
+  font-size: 14px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  margin: 6px 0;
+}
+
+.green { color: #22c55e; font-weight: bold; }
+.red { color: #ef4444; font-weight: bold; }
+.small { opacity: 0.7; font-size: 12px; }
+</style>
+</head>
+
+<body>
+
+<div class="wrapper">
+  <h2>Groww Intraday Charges Calculator</h2>
+
+  <label>Buy Price (₹)</label>
+  <input id="buy" type="number" placeholder="100">
+
+  <label>Sell Price (₹)</label>
+  <input id="sell" type="number" placeholder="102">
+
+  <label>Quantity</label>
+  <input id="qty" type="number" placeholder="100">
+
+  <label>
+    <input type="checkbox" id="squareoff"> Missed auto square-off (₹50 + GST)
+  </label>
+
+  <button onclick="calculate()">Calculate</button>
+
+  <div id="output" class="result"></div>
+</div>
+
+<script>
+function calculate() {
+  const buy = parseFloat(document.getElementById("buy").value);
+  const sell = parseFloat(document.getElementById("sell").value);
+  const qty = parseInt(document.getElementById("qty").value);
+  const squareoff = document.getElementById("squareoff").checked;
+
+  if (!buy || !sell || !qty) {
+    output.innerHTML = "<span class='red'>Please fill all fields</span>";
+    return;
+  }
+
+  const buyValue = buy * qty;
+  const sellValue = sell * qty;
+  const turnover = buyValue + sellValue;
+
+  // Brokerage: min(₹20, 0.05% per order)
+  const brokerageBuy = Math.min(20, buyValue * 0.0005);
+  const brokerageSell = Math.min(20, sellValue * 0.0005);
+  const brokerage = brokerageBuy + brokerageSell;
+
+  // STT only on sell
+  const stt = sellValue * 0.00025;
+
+  // Exchange charges (NSE)
+  const exchange = turnover * 0.0000297;
+
+  // SEBI fees
+  const sebi = turnover * 0.000001;
+
+  // GST 18%
+  const gst = 0.18 * (brokerage + exchange + sebi);
+
+  // Squareoff penalty
+  const squarePenalty = squareoff ? 59 : 0;
+
+  const totalCharges = brokerage + stt + exchange + sebi + gst + squarePenalty;
+  const gross = (sell - buy) * qty;
+  const net = gross - totalCharges;
+
+  const color = net >= 0 ? "green" : "red";
+
+  output.innerHTML = `
+    <div class="row"><b>Gross P&L</b><span>₹${gross.toFixed(2)}</span></div>
+    <div class="row"><b>Total Charges</b><span>₹${totalCharges.toFixed(2)}</span></div>
+    <div class="row ${color}"><b>Net P&L</b><span>₹${net.toFixed(2)}</span></div>
+
+    <hr style="border-color:#1f2937">
+
+    <div class="small">
+      <div class="row">Brokerage: ₹${brokerage.toFixed(2)}</div>
+      <div class="row">STT: ₹${stt.toFixed(2)}</div>
+      <div class="row">Exchange: ₹${exchange.toFixed(2)}</div>
+      <div class="row">SEBI: ₹${sebi.toFixed(2)}</div>
+      <div class="row">GST: ₹${gst.toFixed(2)}</div>
+      <div class="row">Square-off: ₹${squarePenalty.toFixed(2)}</div>
+    </div>
+  `;
+}
+</script>
+
+</body>
+</html>
